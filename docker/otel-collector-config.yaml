@@ -1,0 +1,48 @@
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+      grpc:
+        endpoint: 0.0.0.0:4317
+
+exporters:
+  logging:
+    loglevel: debug
+  jaeger:
+    endpoint: jaeger:14250
+    tls:
+      insecure: true
+  prometheus:
+    endpoint: 0.0.0.0:8889
+    const_labels:
+      service: kube-monitor-probe-kit
+
+processors:
+  batch:
+  resource:
+    attributes:
+      - key: deployment.environment
+        value: docker-compose
+        action: upsert
+
+extensions:
+  health_check:
+  pprof:
+  zpages:
+
+service:
+  extensions: [health_check, pprof, zpages]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch, resource]
+      exporters: [logging, jaeger]
+    metrics:
+      receivers: [otlp]
+      processors: [batch, resource]
+      exporters: [logging, prometheus]
+    logs:
+      receivers: [otlp]
+      processors: [batch, resource]
+      exporters: [logging]
