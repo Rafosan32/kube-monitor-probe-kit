@@ -3,24 +3,14 @@ global:
   evaluation_interval: 15s
 
 scrape_configs:
-  # Otel Collector metrics
   - job_name: 'otel-collector'
     static_configs:
       - targets: ['otel-collector:8889']
+    metrics_path: /metrics
     scrape_interval: 10s
 
-  # Spring Boot Application metrics
   - job_name: 'spring-boot-app'
     static_configs:
-      - targets: ['spring-boot-app:8080']
+      - targets: ['kube-monitor-probe:8080']
+    metrics_path: /actuator/prometheus
     scrape_interval: 10s
-    metrics_path: '/actuator/prometheus'
-    scrape_timeout: 5s
-
-  # Spring Boot Health metrics
-  - job_name: 'spring-boot-health'
-    static_configs:
-      - targets: ['spring-boot-app:8080']
-    scrape_interval: 30s
-    metrics_path: '/actuator/health'
-    scrape_timeout: 5s

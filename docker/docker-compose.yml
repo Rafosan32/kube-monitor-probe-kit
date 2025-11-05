@@ -1,64 +1,110 @@
 services:
   # Spring Boot Application
-  spring-boot-app:
+  kube-monitor-probe:
     build:
       context: ..
       dockerfile: docker/Dockerfile
+    container_name: kube-monitor-probe
     ports:
       - "8080:8080"
     environment:
+      # OPEN TELEMETRY - TÜM MÜMKÜN CONFIG'LER
+      - MANAGEMENT_OTLP_TRACING_ENDPOINT=http://otel-collector:4318
+      - MANAGEMENT_OTLP_METRICS_ENDPOINT=http://otel-collector:4318
+      - MANAGEMENT_OTLP_TRACING_ENABLED=true
+      - MANAGEMENT_OTLP_METRICS_ENABLED=true
+      - MANAGEMENT_TRACING_ENABLED=true
+      - MANAGEMENT_TRACING_SAMPLING_PROBABILITY=1.0
+
+      # GENERIC OTEL - SPRING BUNLARI DA OKUYOR
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://otel-collector:4318
+      - OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=http://otel-collector:4318
+      - OTEL_SERVICE_NAME=kube-monitor-probe-kit
+      - OTEL_METRICS_EXPORTER=otlp
+      - OTEL_TRACES_EXPORTER=otlp
+      - OTEL_LOGS_EXPORTER=otlp
+
+      # LOCALHOST'U OVERRIDE ET
+      - OTEL_EXPORTER_OTLP_TRACES_INSECURE=true
+      - OTEL_EXPORTER_OTLP_METRICS_INSECURE=true
+
+      # Application Configuration
       - SPRING_APPLICATION_NAME=kube-monitor-probe-kit
+      - SERVER_PORT=8080
+      - SERVER_ADDRESS=0.0.0.0
+
+      # Actuator Configuration
       - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,info,metrics,prometheus
       - MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS=always
       - MANAGEMENT_PROMETHEUS_METRICS_EXPORT_ENABLED=true
+
+      # DEBUG
+      - LOGGING_LEVEL_IO_OPENTELEMETRY=DEBUG
+      - LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_BOOT_ACTUATE_AUTOCONFIGURE_TRACING=DEBUG
     depends_on:
-      - otel-collector
+      - otel-collector  # Sadece bağımlılık, health check YOK
+    restart: unless-stopped
     networks:
       - otel-network
 
   # OpenTelemetry Collector
   otel-collector:
     image: otel/opentelemetry-collector:0.96.0
+    container_name: otel-collector
     command: ["--config=/etc/otel-collector-config.yaml"]
     volumes:
       - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml
     ports:
-      - "4317:4317"
-      - "4318:4318"
-      - "8889:8889"
+      - "4317:4317"  # OTLP gRPC
+      - "4318:4318"  # OTLP HTTP
+      - "8889:8889"  # Prometheus metrics
+    # Basit health check
+    healthcheck:
+      test: ["CMD", "echo", "otel-ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
     networks:
       - otel-network
 
   # Jaeger - Tracing UI
   jaeger:
     image: jaegertracing/all-in-one:1.55
+    container_name: jaeger
     ports:
-      - "16686:16686"
+      - "16686:16686"  # UI
+      - "14268:14268"  # HTTP collector
     environment:
       - COLLECTOR_OTLP_ENABLED=true
+    restart: unless-stopped
     networks:
       - otel-network
 
   # Prometheus - Metrics
   prometheus:
     image: prom/prometheus:latest
+    container_name: prometheus
     ports:
       - "9090:9090"
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    restart: unless-stopped
     networks:
       - otel-network
 
   # Grafana - Metrics Dashboard
   grafana:
     image: grafana/grafana:latest
+    container_name: grafana
     ports:
       - "3000:3000"
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
     volumes:
       - ./grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml
+    restart: unless-stopped
     networks:
       - otel-network
 

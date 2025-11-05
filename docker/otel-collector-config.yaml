@@ -1,18 +1,23 @@
 receivers:
   otlp:
     protocols:
-      http:
-        endpoint: 0.0.0.0:4318
       grpc:
         endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
 
 exporters:
+  # Debug için logging
   logging:
     loglevel: debug
-  jaeger:
-    endpoint: jaeger:14250
+
+  # Jaeger için OTLP
+  otlp/jaeger:
+    endpoint: jaeger:4317  # Jaeger'ın OTLP portu
     tls:
       insecure: true
+
+  # Prometheus için
   prometheus:
     endpoint: 0.0.0.0:8889
     const_labels:
@@ -20,29 +25,22 @@ exporters:
 
 processors:
   batch:
-  resource:
-    attributes:
-      - key: deployment.environment
-        value: docker-compose
-        action: upsert
 
 extensions:
   health_check:
-  pprof:
-  zpages:
 
 service:
-  extensions: [health_check, pprof, zpages]
+  extensions: [health_check]
   pipelines:
     traces:
       receivers: [otlp]
-      processors: [batch, resource]
-      exporters: [logging, jaeger]
+      processors: [batch]
+      exporters: [logging, otlp/jaeger]
     metrics:
       receivers: [otlp]
-      processors: [batch, resource]
+      processors: [batch]
       exporters: [logging, prometheus]
     logs:
       receivers: [otlp]
-      processors: [batch, resource]
+      processors: [batch]
       exporters: [logging]
