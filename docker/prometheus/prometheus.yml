@@ -6,10 +6,9 @@ scrape_configs:
   - job_name: 'otel-collector'
     static_configs:
       - targets: ['otel-collector:8889']
-    metrics_path: /metrics
     scrape_interval: 10s
 
-  - job_name: 'spring-boot-app'
+  - job_name: 'spring-app'
     static_configs:
       - targets: ['kube-monitor-probe:8080']
     metrics_path: /actuator/prometheus

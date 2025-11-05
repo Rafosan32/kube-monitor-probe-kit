@@ -51,7 +51,7 @@ public class LogAndMetricTask {
     }
 
     // Her saniye log bas
-    @Scheduled(fixedRate = 1000)
+    @Scheduled(fixedRate = 60000)
     public void generateLogs() {
         long count = logCounter.incrementAndGet();
 

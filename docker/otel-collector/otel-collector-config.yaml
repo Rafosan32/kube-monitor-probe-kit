@@ -7,21 +7,17 @@ receivers:
         endpoint: 0.0.0.0:4318
 
 exporters:
-  # Debug için logging
   logging:
-    loglevel: debug
-
-  # Jaeger için OTLP
+    verbosity: normal
   otlp/jaeger:
-    endpoint: jaeger:4317  # Jaeger'ın OTLP portu
+    endpoint: jaeger:4317
     tls:
       insecure: true
-
-  # Prometheus için
   prometheus:
     endpoint: 0.0.0.0:8889
     const_labels:
       service: kube-monitor-probe-kit
+      environment: development
 
 processors:
   batch:
@@ -35,12 +31,8 @@ service:
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [logging, otlp/jaeger]
+      exporters: [otlp/jaeger]
     metrics:
       receivers: [otlp]
       processors: [batch]
-      exporters: [logging, prometheus]
-    logs:
-      receivers: [otlp]
-      processors: [batch]
-      exporters: [logging]
+      exporters: [prometheus]
