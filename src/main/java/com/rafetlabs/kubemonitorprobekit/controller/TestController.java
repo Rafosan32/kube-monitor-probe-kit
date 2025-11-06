@@ -2,48 +2,63 @@ package com.rafetlabs.kubemonitorprobekit.controller;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 import io.micrometer.core.annotation.Timed;
 
+import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
+
 @RestController
+@RequestMapping("/api/test")
 public class TestController {
 
-    private static final Logger logger = LoggerFactory.getLogger(TestController.class);
+    private static final Logger log = LoggerFactory.getLogger(TestController.class);
 
-    @GetMapping("/test-trace")
-    @Timed(value = "test.trace.endpoint", description = "Test trace endpoint")
-    public String testTrace() {
-        logger.info("Trace test endpoint called - generating span");
-        return "Trace test completed - " + System.currentTimeMillis();
-    }
+    @Timed(value = "test.logs.generate", histogram = true)
+    @PostMapping(value = "/logs", produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+    public ResponseEntity<Map<String, Object>> generateLogs(
+            @RequestParam(defaultValue = "info") String level,
+            @RequestParam(defaultValue = "5") int count,
+            @RequestParam(defaultValue = "generated from web api") String message
+    ) {
+        // Basit validasyon
+        if (count < 1) count = 1;
+        if (count > 1000) count = 1000; // aşırı log patlamasını önle
 
-    @GetMapping("/test-metric")
-    @Timed(value = "test.metric.endpoint", description = "Test metric endpoint")
-    public String testMetric() {
-        logger.info("Metric test endpoint called - generating metrics");
-        return "Metric test completed - " + System.currentTimeMillis();
-    }
+        // Level normalize
+        String lvl = level == null ? "info" : level.toLowerCase();
 
-    @GetMapping("/test-log")
-    public String testLog(@RequestParam(defaultValue = "5") int count) {
-        logger.info("Starting log generation test with {} logs", count);
-
-        for (int i = 0; i < count; i++) {
-            logger.info("Generated log entry #{}/{}", i + 1, count);
-            logger.debug("Debug log entry - processing data");
+        for (int i = 1; i <= count; i++) {
+            // Yapısal (JSON-friendly) log gövdesi — Logback pattern bunu JSON’a dönüştürür
+            // ("{}" placeholder’ı ile sayıyı ayrı alan gibi taşır, Loki’de query kolaylaşır)
+            switch (lvl) {
+                case "debug":
+                    log.debug("{\"event\":\"test_log\",\"seq\":{},\"level\":\"debug\",\"msg\":\"{}\"}", i, message);
+                    break;
+                case "warn":
+                    log.warn("{\"event\":\"test_log\",\"seq\":{},\"level\":\"warn\",\"msg\":\"{}\"}", i, message);
+                    break;
+                case "error":
+                    log.error("{\"event\":\"test_log\",\"seq\":{},\"level\":\"error\",\"msg\":\"{}\"}", i, message);
+                    break;
+                default:
+                    log.info("{\"event\":\"test_log\",\"seq\":{},\"level\":\"info\",\"msg\":\"{}\"}", i, message);
+            }
         }
 
-        logger.warn("Completed generating {} log entries", count);
-        logger.error("Simulated error log for testing");
-
-        return String.format("Generated %d log entries for Fluent Bit -> Loki", count);
+        Map<String, Object> body = new HashMap<>();
+        body.put("ok", true);
+        body.put("ts", Instant.now().toString());
+        body.put("level", lvl);
+        body.put("count", count);
+        body.put("message", message);
+        body.put("pipeline", "Spring -> OTel Collector (filelog) -> Loki -> Grafana");
+        return ResponseEntity.ok(body);
     }
 
-    @GetMapping("/health")
-    public String health() {
-        logger.debug("Health check endpoint called");
-        return "{\"status\": \"UP\", \"service\": \"kube-monitor-probe-kit\"}";
-    }
+    // NOT: /health endpoint'i kaldırıldı.
+    // Sağlık kontrolü için HealthController'daki /healthz veya actuator /actuator/health kullanılmalıdır.
 }

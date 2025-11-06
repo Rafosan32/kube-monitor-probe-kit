@@ -1,5 +1,4 @@
 services:
-  # Spring Boot Application
   kube-monitor-probe:
     build:
       context: ..
@@ -8,120 +7,67 @@ services:
     ports:
       - "8080:8080"
     environment:
-      # METRICS & TRACES - OpenTelemetry
       - OTEL_SERVICE_NAME=kube-monitor-probe-kit
       - OTEL_TRACES_EXPORTER=otlp
       - OTEL_METRICS_EXPORTER=otlp
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
-
-      # LOGS - OTEL Log Bridge KAPALI
-      - OTEL_LOGS_EXPORTER=none
-      - MANAGEMENT_OTLP_LOGS_ENABLED=false
-
-      # SPRING BOOT OTEL - SADECE TRACE ve METRIC
-      - MANAGEMENT_OTLP_TRACING_ENDPOINT=http://otel-collector:4318
-      - MANAGEMENT_OTLP_METRICS_ENDPOINT=http://otel-collector:4318
-      - MANAGEMENT_TRACING_SAMPLING_PROBABILITY=1.0
-
-      # APPLICATION
-      - SPRING_APPLICATION_NAME=kube-monitor-probe-kit
-      - SERVER_PORT=8080
-      - SERVER_ADDRESS=0.0.0.0
-      - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,info,metrics,prometheus
-      - MANAGEMENT_PROMETHEUS_METRICS_EXPORT_ENABLED=true
-
-      # LOGGING - JSON FORMAT (Fluent Bit için)
-      - LOGGING_PATTERN_CONSOLE={"timestamp":"%d{yyyy-MM-dd HH:mm:ss.SSS}","level":"%level","service":"kube-monitor-probe-kit","logger":"%logger","thread":"%thread","message":"%msg"}%n
-      - LOGGING_LEVEL_COM_RAFETLABS=INFO
-      - LOGGING_LEVEL_ORG_SPRINGFRAMEWORK=WARN
     volumes:
-      - ./logs:/app/logs
+      - applogs:/app/logs
     depends_on:
-      - fluent-bit
       - otel-collector
-    restart: unless-stopped
     networks:
       - monitoring-network
 
-  # Fluent Bit - Log Aggregation
-  fluent-bit:
-    image: fluent/fluent-bit:2.2
-    container_name: fluent-bit
-    ports:
-      - "24224:24224"
-    volumes:
-      - ./fluent-bit/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf
-      - ./fluent-bit/parsers.conf:/fluent-bit/etc/parsers.conf
-      - ./logs:/app/logs
-    depends_on:
-      - loki
-    restart: unless-stopped
-    networks:
-      - monitoring-network
-
-  # OpenTelemetry Collector - Metrics & Traces
   otel-collector:
-    image: otel/opentelemetry-collector:0.96.0
+    image: otel/opentelemetry-collector-contrib:0.104.0
     container_name: otel-collector
-    command: ["--config=/etc/otel-collector-config.yaml"]
-    volumes:
-      - ./otel-collector/otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    command: ["--config=/etc/otelcol/otel-collector-config.yaml"]
     ports:
       - "4317:4317"
       - "4318:4318"
       - "8889:8889"
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:13133/"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-    restart: unless-stopped
+    volumes:
+      - ./otel-collector/otel-collector-config.yaml:/etc/otelcol/otel-collector-config.yaml:ro
+      - applogs:/app/logs:ro
+    depends_on:
+      - loki
+      - jaeger
     networks:
       - monitoring-network
 
-  # Jaeger - Tracing
-  jaeger:
-    image: jaegertracing/all-in-one:1.55
-    container_name: jaeger
-    ports:
-      - "16686:16686"
-    environment:
-      - COLLECTOR_OTLP_ENABLED=true
-    restart: unless-stopped
-    networks:
-      - monitoring-network
-
-  # Prometheus - Metrics
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v2.54.1
     container_name: prometheus
     ports:
       - "9090:9090"
     volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-    restart: unless-stopped
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     networks:
       - monitoring-network
 
-  # Loki - Log Storage
   loki:
-    image: grafana/loki:2.9.0
+    image: grafana/loki:2.9.8
     container_name: loki
+    command: ["-config.file=/etc/loki/local-config.yaml"]
     ports:
       - "3100:3100"
-    command: -config.file=/etc/loki/local-config.yaml
-    restart: unless-stopped
     networks:
       - monitoring-network
 
-  # Grafana - Visualization
+  jaeger:
+    image: jaegertracing/all-in-one:1.57
+    container_name: jaeger
+    ports:
+      - "16686:16686" # UI
+      - "14317:4317"   # OTLP gRPC
+    networks:
+      - monitoring-network
+
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:11.2.2
     container_name: grafana
     ports:
       - "3000:3000"
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
     volumes:
       - ./grafana/grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml
       - ./grafana/dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml
@@ -130,10 +76,12 @@ services:
       - jaeger
       - prometheus
       - loki
-    restart: unless-stopped
     networks:
       - monitoring-network
 
 networks:
   monitoring-network:
     driver: bridge
+
+volumes:
+  applogs:
