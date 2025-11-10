@@ -4,27 +4,22 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
          http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
         <version>3.3.4</version>
         <relativePath/>
     </parent>
-
     <groupId>com.rafetlabs</groupId>
     <artifactId>kube-monitor-probe-kit</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
-
     <name>kube-monitor-probe-kit</name>
     <description>Kubernetes Monitor Probe Kit with OpenTelemetry</description>
-
     <properties>
         <java.version>21</java.version>
         <opentelemetry.version>1.41.0</opentelemetry.version>
     </properties>
-
     <dependencyManagement>
         <dependencies>
             <dependency>
@@ -36,7 +31,6 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
-
     <dependencies>
         <!-- Spring Boot Starters -->
         <dependency>
@@ -53,13 +47,11 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
-
         <!-- Logging -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-logging</artifactId>
         </dependency>
-
         <!-- OpenTelemetry SDK -->
         <dependency>
             <groupId>io.opentelemetry</groupId>
@@ -77,7 +69,6 @@
             <groupId>io.opentelemetry</groupId>
             <artifactId>opentelemetry-sdk-logs</artifactId>
         </dependency>
-
         <!-- OpenTelemetry Exporters -->
         <dependency>
             <groupId>io.opentelemetry</groupId>
@@ -87,7 +78,10 @@
             <groupId>io.opentelemetry</groupId>
             <artifactId>opentelemetry-exporter-logging</artifactId>
         </dependency>
-
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-sdk-extension-autoconfigure</artifactId>
+        </dependency>
         <!-- Micrometer Prometheus -->
         <dependency>
             <groupId>io.micrometer</groupId>
@@ -100,7 +94,6 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
-
     <build>
         <plugins>
             <plugin>

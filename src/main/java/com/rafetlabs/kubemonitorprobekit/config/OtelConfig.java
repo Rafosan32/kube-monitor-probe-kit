@@ -1,75 +1,77 @@
 package com.rafetlabs.kubemonitorprobekit.config;
 
 import io.opentelemetry.api.OpenTelemetry;
-import io.opentelemetry.api.common.AttributeKey;
-import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.metrics.Meter;
-import io.opentelemetry.exporter.logging.LoggingMetricExporter; // (opsiyonel: debug)
-import io.opentelemetry.exporter.logging.LoggingSpanExporter;  // (opsiyonel: debug)
-import io.opentelemetry.exporter.otlp.http.metrics.OtlpHttpMetricExporter;
-import io.opentelemetry.exporter.otlp.http.trace.OtlpHttpSpanExporter;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
-import io.opentelemetry.sdk.logs.SdkLoggerProvider;
-import io.opentelemetry.sdk.metrics.SdkMeterProvider;
-import io.opentelemetry.sdk.metrics.export.PeriodicMetricReader;
-import io.opentelemetry.sdk.resources.Resource;
-import io.opentelemetry.sdk.trace.SdkTracerProvider;
-import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
+import io.opentelemetry.sdk.autoconfigure.AutoConfiguredOpenTelemetrySdk;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @Configuration
 public class OtelConfig {
 
-    private static final String SERVICE_NAME = "kube-monitor-probe-kit";
+    @Value("${OTEL_SERVICE_NAME:kube-monitor-probe-kit}")
+    private String serviceName;
+
+    @Value("${OTEL_EXPORTER_PROTOCOL:http}")
+    private String exporterProtocol;
+
+    @Value("${OTEL_EXPORTER_OTLP_ENDPOINT:}")
+    private String otlpEndpointBase;
+
+    @Value("${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:}")
+    private String tracesEndpoint;
+
+    @Value("${OTEL_EXPORTER_OTLP_METRICS_ENDPOINT:}")
+    private String metricsEndpoint;
+
+    @Value("${OTEL_METRIC_EXPORT_INTERVAL_MS:10000}")
+    private long metricExportIntervalMs;
+
+    @Value("${OTEL_RESOURCE_ATTRIBUTES:}")
+    private String resourceAttributes;
+
+    private String normalizeProtocol(String proto) {
+        if (proto == null) return "http/protobuf";
+        String p = proto.trim().toLowerCase();
+        return p.equals("grpc") ? "grpc" : "http/protobuf";
+    }
 
     @Bean
     public OpenTelemetry openTelemetry() {
-        // semconv yok: service.name'i manuel veriyoruz
-        Resource resource = Resource.getDefault().merge(
-                Resource.create(
-                        Attributes.of(AttributeKey.stringKey("service.name"), SERVICE_NAME)
-                )
-        );
+        Map<String, String> props = new HashMap<>();
 
-        // Traces -> OTLP HTTP (Collector:4318)
-        OtlpHttpSpanExporter spanExporter = OtlpHttpSpanExporter.builder()
-                .setEndpoint("http://otel-collector:4318/v1/traces")
-                .build();
+        props.put("otel.service.name", serviceName);
+        props.put("otel.exporter.otlp.protocol", normalizeProtocol(exporterProtocol));
 
-        SdkTracerProvider tracerProvider = SdkTracerProvider.builder()
-                .addSpanProcessor(BatchSpanProcessor.builder(spanExporter).build())
-                // Debug istersen aç:
-                // .addSpanProcessor(BatchSpanProcessor.builder(LoggingSpanExporter.create()).build())
-                .setResource(resource)
-                .build();
+        if (otlpEndpointBase != null && !otlpEndpointBase.isBlank()) {
+            props.put("otel.exporter.otlp.endpoint", otlpEndpointBase.trim());
+        }
+        if (tracesEndpoint != null && !tracesEndpoint.isBlank()) {
+            props.put("otel.exporter.otlp.traces.endpoint", tracesEndpoint.trim());
+        }
+        if (metricsEndpoint != null && !metricsEndpoint.isBlank()) {
+            props.put("otel.exporter.otlp.metrics.endpoint", metricsEndpoint.trim());
+        }
+        props.put("otel.metric.export.interval", metricExportIntervalMs + "ms");
+        if (resourceAttributes != null && !resourceAttributes.isBlank()) {
+            props.put("otel.resource.attributes", resourceAttributes.trim());
+        }
 
-        // Metrics -> OTLP HTTP (Collector → Prometheus reader)
-        OtlpHttpMetricExporter metricExporter = OtlpHttpMetricExporter.builder()
-                .setEndpoint("http://otel-collector:4318/v1/metrics")
-                .build();
-
-        SdkMeterProvider meterProvider = SdkMeterProvider.builder()
-                .setResource(resource)
-                .registerMetricReader(PeriodicMetricReader.builder(metricExporter).build())
-                // Debug metric export istersen:
-                // .registerMetricReader(PeriodicMetricReader.builder(LoggingMetricExporter.create()).build())
-                .build();
-
-        // Logs: exporter/processor YOK (Collector filelog tail ediyor)
-        SdkLoggerProvider loggerProvider = SdkLoggerProvider.builder().build();
-
-        return OpenTelemetrySdk.builder()
-                .setTracerProvider(tracerProvider)
-                .setMeterProvider(meterProvider)
-                .setLoggerProvider(loggerProvider)
-                .build();
+        // Autoconfigure kullanımı: argümanlı değil
+        OpenTelemetrySdk sdk = AutoConfiguredOpenTelemetrySdk.initialize().getOpenTelemetrySdk();
+        return sdk;
     }
 
     @Bean
     @Lazy
     public Meter meter(OpenTelemetry openTelemetry) {
-        return openTelemetry.getMeter(SERVICE_NAME);
+        return openTelemetry.getMeter(serviceName);
     }
 }
