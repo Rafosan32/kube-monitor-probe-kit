@@ -1,289 +1,146 @@
 {
   "id": null,
-  "uid": "kmpk-obsv",
-  "title": "kube-monitor-probe-kit \u2013 Observability",
+  "uid": "kmpk-tempo",
+  "title": "kube-monitor-probe-kit – Full Observability (Tempo)",
   "timezone": "browser",
   "schemaVersion": 39,
   "version": 1,
   "refresh": "10s",
-  "tags": [
-    "kube-monitor-probe-kit",
-    "otel",
-    "spring",
-    "prometheus",
-    "loki",
-    "jaeger"
-  ],
-  "time": {
-    "from": "now-1h",
-    "to": "now"
-  },
-  "templating": {
-    "list": [
-      {
-        "name": "DS_PROM",
-        "type": "datasource",
-        "query": "Prometheus",
-        "label": "Prometheus"
-      },
-      {
-        "name": "DS_LOKI",
-        "type": "datasource",
-        "query": "Loki",
-        "label": "Loki"
-      },
-      {
-        "name": "DS_JAEGER",
-        "type": "datasource",
-        "query": "Jaeger",
-        "label": "Jaeger"
-      }
-    ]
-  },
+  "editable": true,
+  "time": {"from": "now-1h", "to": "now"},
+  "tags": ["kube-monitor-probe-kit","otel","spring","prometheus","loki","tempo","traces"],
   "panels": [
     {
       "type": "stat",
-      "title": "RPS",
-      "gridPos": {
-        "x": 0,
-        "y": 0,
-        "w": 6,
-        "h": 4
-      },
-      "datasource": "${DS_PROM}",
-      "targets": [
-        {
-          "expr": "sum(rate(http_server_requests_seconds_count{job=\\\"kube-monitor-probe-kit\\\"}[5m]))",
-          "refId": "A"
-        }
-      ]
+      "title": "Scrape Health (up)",
+      "gridPos": {"x": 0, "y": 0, "w": 3, "h": 4},
+      "datasource": "Prometheus",
+      "options": {"reduceOptions": {"calcs": ["last"], "fields": "", "values": false}},
+      "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color":"red"},{"color":"green","value":1}]}}},
+      "targets": [{"expr": "up", "refId": "A"}]
     },
     {
       "type": "stat",
-      "title": "Hata Oran\u0131 (5xx, %)",
-      "gridPos": {
-        "x": 6,
-        "y": 0,
-        "w": 6,
-        "h": 4
-      },
-      "datasource": "${DS_PROM}",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percentunit",
-          "min": 0,
-          "max": 1,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 0.05
-              },
-              {
-                "color": "red",
-                "value": 0.1
-              }
-            ]
-          }
-        }
-      },
-      "targets": [
-        {
-          "expr": "sum(rate(http_server_requests_seconds_count{job=\\\"kube-monitor-probe-kit\\\",status=~\\\"5..\\\"}[5m])) / sum(rate(http_server_requests_seconds_count{job=\\\"kube-monitor-probe-kit\\\"}[5m]))",
-          "refId": "A"
-        }
-      ]
+      "title": "RPS",
+      "gridPos": {"x": 3, "y": 0, "w": 3, "h": 4},
+      "datasource": "Prometheus",
+      "targets": [{"expr": "sum(rate(http_server_requests_seconds_count[5m]))", "refId": "A"}]
+    },
+    {
+      "type": "stat",
+      "title": "Hata Oranı (5xx, %)",
+      "gridPos": {"x": 6, "y": 0, "w": 5, "h": 4},
+      "datasource": "Prometheus",
+      "fieldConfig": {"defaults": {"unit": "percentunit","min": 0,"max": 1,"thresholds": {"mode": "absolute","steps":[{"color":"green"},{"color":"orange","value":0.05},{"color":"red","value":0.1}]}}},
+      "targets": [{"expr": "sum(rate(http_server_requests_seconds_count{status=~\"5..\"}[5m])) / sum(rate(http_server_requests_seconds_count[5m]))", "refId": "A"}]
     },
     {
       "type": "stat",
       "title": "p95 Gecikme (s)",
-      "gridPos": {
-        "x": 12,
-        "y": 0,
-        "w": 6,
-        "h": 4
-      },
-      "datasource": "${DS_PROM}",
+      "gridPos": {"x": 11, "y": 0, "w": 5, "h": 4},
+      "datasource": "Prometheus",
+      "targets": [{"expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket[5m])))", "refId": "A"}]
+    },
+    {
+      "type": "stat",
+      "title": "Uptime (s)",
+      "gridPos": {"x": 16, "y": 0, "w": 4, "h": 4},
+      "datasource": "Prometheus",
+      "targets": [{"expr": "time() - process_start_time_seconds", "refId": "A"}]
+    },
+    {
+      "type": "timeseries",
+      "title": "Gecikme – p50/p95/p99 (s)",
+      "gridPos": {"x": 0, "y": 4, "w": 12, "h": 8},
+      "datasource": "Prometheus",
       "targets": [
-        {
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket{job=\\\"kube-monitor-probe-kit\\\"}[5m])))",
-          "refId": "A"
-        }
+        {"expr": "histogram_quantile(0.50, sum by (le) (rate(http_server_requests_seconds_bucket[5m])))", "legendFormat": "p50", "refId": "A"},
+        {"expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket[5m])))", "legendFormat": "p95", "refId": "B"},
+        {"expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_requests_seconds_bucket[5m])))", "legendFormat": "p99", "refId": "C"}
       ]
     },
     {
-      "type": "graph",
-      "title": "\u0130stek H\u0131z\u0131 \u2013 2xx/4xx/5xx",
-      "gridPos": {
-        "x": 0,
-        "y": 4,
-        "w": 12,
-        "h": 8
-      },
-      "datasource": "${DS_PROM}",
-      "lines": true,
+      "type": "timeseries",
+      "title": "İstek Hızı – 2xx/4xx/5xx (req/s)",
+      "gridPos": {"x": 12, "y": 4, "w": 12, "h": 8},
+      "datasource": "Prometheus",
       "targets": [
-        {
-          "expr": "sum(rate(http_server_requests_seconds_count{job=\\\"kube-monitor-probe-kit\\\",status=~\\\"2..\\\"}[5m]))",
-          "legendFormat": "2xx",
-          "refId": "A"
-        },
-        {
-          "expr": "sum(rate(http_server_requests_seconds_count{job=\\\"kube-monitor-probe-kit\\\",status=~\\\"4..\\\"}[5m]))",
-          "legendFormat": "4xx",
-          "refId": "B"
-        },
-        {
-          "expr": "sum(rate(http_server_requests_seconds_count{job=\\\"kube-monitor-probe-kit\\\",status=~\\\"5..\\\"}[5m]))",
-          "legendFormat": "5xx",
-          "refId": "C"
-        }
+        {"expr": "sum(rate(http_server_requests_seconds_count{status=~\"2..\"}[5m]))", "legendFormat": "2xx", "refId": "A"},
+        {"expr": "sum(rate(http_server_requests_seconds_count{status=~\"4..\"}[5m]))", "legendFormat": "4xx", "refId": "B"},
+        {"expr": "sum(rate(http_server_requests_seconds_count{status=~\"5..\"}[5m]))", "legendFormat": "5xx", "refId": "C"}
       ]
     },
     {
-      "type": "graph",
-      "title": "Gecikme \u2013 p50/p95/p99 (s)",
-      "gridPos": {
-        "x": 12,
-        "y": 4,
-        "w": 12,
-        "h": 8
-      },
-      "datasource": "${DS_PROM}",
+      "type": "timeseries",
+      "title": "Custom Operations – rate(custom_operations_total)",
+      "gridPos": {"x": 0, "y": 12, "w": 8, "h": 7},
+      "datasource": "Prometheus",
+      "targets": [{"expr": "sum(rate(custom_operations_total[1m]))", "legendFormat": "ops/s", "refId": "A"}]
+    },
+    {
+      "type": "timeseries",
+      "title": "Custom Operations – increase(5m)",
+      "gridPos": {"x": 8, "y": 12, "w": 8, "h": 7},
+      "datasource": "Prometheus",
+      "targets": [{"expr": "sum(increase(custom_operations_total[5m]))", "legendFormat": "increase-5m", "refId": "A"}]
+    },
+    {
+      "type": "timeseries",
+      "title": "CPU (sec/s) & Process CPU Usage",
+      "gridPos": {"x": 16, "y": 12, "w": 8, "h": 7},
+      "datasource": "Prometheus",
       "targets": [
-        {
-          "expr": "histogram_quantile(0.50, sum by (le) (rate(http_server_requests_seconds_bucket{job=\\\"kube-monitor-probe-kit\\\"}[5m])))",
-          "legendFormat": "p50",
-          "refId": "A"
-        },
-        {
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket{job=\\\"kube-monitor-probe-kit\\\"}[5m])))",
-          "legendFormat": "p95",
-          "refId": "B"
-        },
-        {
-          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_requests_seconds_bucket{job=\\\"kube-monitor-probe-kit\\\"}[5m])))",
-          "legendFormat": "p99",
-          "refId": "C"
-        }
+        {"expr": "rate(process_cpu_seconds_total[1m])", "legendFormat": "cpu sec/s", "refId": "A"},
+        {"expr": "process_cpu_usage", "legendFormat": "proc cpu usage", "refId": "B"}
       ]
     },
     {
-      "type": "graph",
-      "title": "Custom Operations \u2013 rate(custom_operations_total)",
-      "gridPos": {
-        "x": 0,
-        "y": 12,
-        "w": 8,
-        "h": 7
-      },
-      "datasource": "${DS_PROM}",
-      "targets": [
-        {
-          "expr": "sum(rate(custom_operations_total{job=\\\"kube-monitor-probe-kit\\\"}[5m]))",
-          "legendFormat": "ops/s",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "type": "graph",
-      "title": "CPU ve Uptime",
-      "gridPos": {
-        "x": 8,
-        "y": 12,
-        "w": 8,
-        "h": 7
-      },
-      "datasource": "${DS_PROM}",
-      "targets": [
-        {
-          "expr": "rate(process_cpu_seconds_total{job=\\\"kube-monitor-probe-kit\\\"}[1m])",
-          "legendFormat": "cpu sec/s",
-          "refId": "A"
-        },
-        {
-          "expr": "time() - process_start_time_seconds{job=\\\"kube-monitor-probe-kit\\\"}",
-          "legendFormat": "uptime",
-          "refId": "B"
-        }
-      ]
-    },
-    {
-      "type": "graph",
+      "type": "timeseries",
       "title": "JVM Heap Used/Committed/Max (MB)",
-      "gridPos": {
-        "x": 16,
-        "y": 12,
-        "w": 8,
-        "h": 7
-      },
-      "datasource": "${DS_PROM}",
+      "gridPos": {"x": 0, "y": 19, "w": 12, "h": 8},
+      "datasource": "Prometheus",
       "targets": [
-        {
-          "expr": "sum(jvm_memory_used_bytes{job=\\\"kube-monitor-probe-kit\\\",area=\\\"heap\\\"})/1024/1024",
-          "legendFormat": "used",
-          "refId": "A"
-        },
-        {
-          "expr": "sum(jvm_memory_committed_bytes{job=\\\"kube-monitor-probe-kit\\\",area=\\\"heap\\\"})/1024/1024",
-          "legendFormat": "committed",
-          "refId": "B"
-        },
-        {
-          "expr": "sum(jvm_memory_max_bytes{job=\\\"kube-monitor-probe-kit\\\",area=\\\"heap\\\"})/1024/1024",
-          "legendFormat": "max",
-          "refId": "C"
-        }
+        {"expr": "sum(jvm_memory_used_bytes{area=\"heap\"})/1024/1024", "legendFormat": "used", "refId": "A"},
+        {"expr": "sum(jvm_memory_committed_bytes{area=\"heap\"})/1024/1024", "legendFormat": "committed", "refId": "B"},
+        {"expr": "sum(jvm_memory_max_bytes{area=\"heap\"})/1024/1024", "legendFormat": "max", "refId": "C"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "GC Pause (s)",
+      "gridPos": {"x": 12, "y": 19, "w": 12, "h": 8},
+      "datasource": "Prometheus",
+      "targets": [
+        {"expr": "rate(jvm_gc_pause_seconds_sum[5m])", "legendFormat": "gc pause sum", "refId": "A"},
+        {"expr": "rate(jvm_gc_pause_seconds_count[5m])", "legendFormat": "gc pause count", "refId": "B"}
       ]
     },
     {
       "type": "logs",
-      "title": "Logs (Loki) \u2013 kube-monitor-probe-kit",
-      "gridPos": {
-        "x": 0,
-        "y": 19,
-        "w": 16,
-        "h": 10
-      },
-      "datasource": "${DS_LOKI}",
-      "targets": [
-        {
-          "expr": "{job=\\\"kube-monitor-probe-kit\\\"}",
-          "refId": "A"
-        }
-      ],
-      "options": {
-        "showTime": true,
-        "wrapLogMessage": true,
-        "prettifyLogMessage": false,
-        "enableLogDetails": true
-      }
+      "title": "Logs (Loki) – kube-monitor-probe-kit",
+      "gridPos": {"x": 0, "y": 27, "w": 12, "h": 10},
+      "datasource": "Loki",
+      "targets": [ {"expr": "{job=\"kube-monitor-probe-kit\"} | json", "refId": "A"} ],
+      "options": { "showTime": true, "wrapLogMessage": true, "prettifyLogMessage": false, "enableLogDetails": true }
     },
     {
-      "type": "jaeger",
-      "title": "Traces (Jaeger) \u2013 kube-monitor-probe-kit",
-      "gridPos": {
-        "x": 16,
-        "y": 19,
-        "w": 8,
-        "h": 10
-      },
-      "datasource": "${DS_JAEGER}",
-      "options": {
-        "query": {
-          "service": "kube-monitor-probe-kit",
-          "limit": 20,
-          "maxDuration": null,
-          "minDuration": null,
-          "tags": ""
+      "type": "traces",
+      "title": "Traces (Tempo) – kube-monitor-probe-kit",
+      "gridPos": {"x": 12, "y": 27, "w": 12, "h": 10},
+      "datasource": "Tempo",
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "search",
+          "serviceName": "kube-monitor-probe-kit",
+          "operationName": "",
+          "minDuration": "",
+          "maxDuration": "",
+          "tags": "",
+          "limit": 50
         }
-      }
+      ],
+      "options": {"showSpanBar": true}
     }
   ]
 }

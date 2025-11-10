@@ -54,14 +54,18 @@ services:
     networks:
       - monitoring-network
 
-  jaeger:
-    image: jaegertracing/all-in-one:1.57
-    container_name: jaeger
-    ports:
-      - "16686:16686" # UI
-      - "14317:4317"   # OTLP gRPC
-    networks:
-      - monitoring-network
+    tempo:
+      image: grafana/tempo:2.5.0
+      container_name: tempo
+      command: [ "-config.file=/etc/tempo/tempo.yaml" ]
+      volumes:
+        - ./tempo:/etc/tempo
+      ports:
+        - "${TEMPO_HTTP_PORT}:3200"
+        - "${TEMPO_OTLP_GRPC_PORT}:4317"
+        - "${TEMPO_OTLP_HTTP_PORT}:4318"
+      networks:
+        - monitoring-network
 
   grafana:
     image: grafana/grafana:11.2.2

@@ -1,27 +1,31 @@
 receivers:
   otlp:
     protocols:
-      grpc: { endpoint: 0.0.0.0:4317 }
-      http: { endpoint: 0.0.0.0:4318 }
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
 
+  # İsteğe bağlı: uygulama log dosyasını JSON olarak oku
+  # (uygulaman logback ile JSON yazıyor)
   filelog:
-    include: [ /app/logs/application.log ]
-    start_at: end                 # geçmiş bozukları okuma
-    include_file_path: true
-    include_file_name: true
-    encoding: utf-8
+    include:
+      - /app/logs/*.log
+    start_at: beginning
+    # log rotasyonlarında NUL karakteri vs. gelirse düşür, Collector devrilmesin
+    on_error: drop
     operators:
       - type: json_parser
-        timestamp:
-          parse_from: body.timestamp
-          layout: '%Y-%m-%d %H:%M:%S.%L'   # 2025-11-06 11:43:47.929 (nokta)
-      # (opsiyonel) message içi JSON’u da açmak istersen:
-      # - type: json_parser
-      #   parse_from: body.message
-      #   on_error: send
+        id: json_parser
+        parse_from: body
+      - type: time_parser
+        layout_type: strptime
+        parse_from: body.timestamp
+        # Logback pattern'in: %d{yyyy-MM-dd HH:mm:ss,SSS}
+        layout: "%Y-%m-%d %H:%M:%S,%f"
       - type: move
-        from: attributes["log.file.path"]
-        to: resource["log.file.path"]
+        from: body.message
+        to: body.msg
 
 processors:
   batch: {}
@@ -30,42 +34,36 @@ processors:
       - key: service.name
         value: kube-monitor-probe-kit
         action: upsert
-  attributes/add_service:
-    actions:
-      - key: service
-        action: upsert
-        from_attribute: service.name
 
 exporters:
-  logging:
-    verbosity: normal
-
-  otlp/jaeger:
-    endpoint: jaeger:4317
-    tls: { insecure: true }
-
+  # Prometheus'a pull endpoint
   prometheus:
     endpoint: 0.0.0.0:8889
 
+  # Loki (labels hatası yaşamamak için sade konfig)
   loki:
     endpoint: http://loki:3100/loki/api/v1/push
-    tls: { insecure: true }
-    # EN AZ 1 LABEL zorunlu → job yeter
-    default_labels_enabled:
-      job: true
-      exporter: false
+    # 0.104'ta resource attribute'lar label olarak taşınır; service.name zorunlu etiketi sağlar
+
+  # Tempo'ya OTLP
+  otlp/tempo:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
 
 service:
   pipelines:
-    logs:
-      receivers: [filelog]
-      processors: [resource, attributes/add_service, batch]
-      exporters: [loki, logging]
-    traces:
-      receivers: [otlp]
-      processors: [batch]
-      exporters: [otlp/jaeger]
     metrics:
       receivers: [otlp]
-      processors: [batch]
+      processors: [batch, resource]
       exporters: [prometheus]
+
+    logs:
+      receivers: [filelog]
+      processors: [batch, resource]
+      exporters: [loki]
+
+    traces:
+      receivers: [otlp]
+      processors: [batch, resource]
+      exporters: [otlp/tempo]
