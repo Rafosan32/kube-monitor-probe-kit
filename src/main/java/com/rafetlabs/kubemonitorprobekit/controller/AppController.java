@@ -15,24 +15,21 @@ public class AppController {
 
     private static final Logger log = LoggerFactory.getLogger(AppController.class);
 
-    @GetMapping(value = "/ping", produces = MediaType.APPLICATION_JSON_VALUE)
-    public Map<String, Object> ping() {
+    @GetMapping(value = "/info", produces = MediaType.APPLICATION_JSON_VALUE)
+    public Map<String, Object> info() {
         Map<String, Object> body = new HashMap<>();
-        body.put("ok", true);
+        body.put("app", "kube-monitor-probe-kit");
         body.put("ts", Instant.now().toString());
-
-        // JSON log (Logback pattern JSON'a dönüştürür)
-        log.info("{\"event\":\"ping\",\"ok\":true}");
-
         return body;
     }
 
     @PostMapping(value = "/log", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE)
-    public Map<String, Object> createLog(@RequestParam(defaultValue = "info") String level,
-                                         @RequestParam(defaultValue = "web-ui test log") String message) {
+    public Map<String, Object> log(@RequestParam(defaultValue = "info") String level,
+                                   @RequestParam(defaultValue = "hello from api") String message) {
 
         switch (level.toLowerCase()) {
+            case "trace": log.trace("{}", message); break;
             case "debug": log.debug("{}", message); break;
             case "warn":  log.warn("{}", message);  break;
             case "error": log.error("{}", message); break;

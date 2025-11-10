@@ -3,13 +3,17 @@ global:
   evaluation_interval: 15s
 
 scrape_configs:
+  # Spring Boot Actuator (Micrometer)
+  - job_name: 'kube-monitor-probe'
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ['kube-monitor-probe:8080']
+        labels:
+          app: kube-monitor-probe-kit
+
+  # OTel Collector Prometheus exporter endpoint
   - job_name: 'otel-collector'
     static_configs:
       - targets: ['otel-collector:8889']
-    scrape_interval: 10s
-
-  - job_name: 'spring-app'
-    static_configs:
-      - targets: ['kube-monitor-probe:8080']
-    metrics_path: /actuator/prometheus
-    scrape_interval: 10s
+        labels:
+          app: otel-collector

@@ -4,88 +4,123 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     container_name: kube-monitor-probe
-    ports:
-      - "8080:8080"
     environment:
       - OTEL_SERVICE_NAME=kube-monitor-probe-kit
       - OTEL_TRACES_EXPORTER=otlp
       - OTEL_METRICS_EXPORTER=otlp
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+    ports:
+      - "8080:8080"
     volumes:
-      - applogs:/app/logs
+      - app-logs:/app/logs
     depends_on:
       - otel-collector
-    networks:
-      - monitoring-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep -q 'UP'"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
 
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.104.0
     container_name: otel-collector
     command: ["--config=/etc/otelcol/otel-collector-config.yaml"]
-    ports:
-      - "4317:4317"
-      - "4318:4318"
-      - "8889:8889"
     volumes:
       - ./otel-collector/otel-collector-config.yaml:/etc/otelcol/otel-collector-config.yaml:ro
-      - applogs:/app/logs:ro
+      - app-logs:/app/logs:ro
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+      - "8889:8889"   # Collector Prometheus exporter (scrape endpoint)
     depends_on:
-      - loki
       - tempo
-    networks:
-      - monitoring-network
+      - loki
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "otelcol", "--version"]
+      interval: 30s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
   prometheus:
-    image: prom/prometheus:v2.54.1
+    image: prom/prometheus:v2.55.0
     container_name: prometheus
-    ports:
-      - "9090:9090"
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-    networks:
-      - monitoring-network
-
-  loki:
-    image: grafana/loki:2.9.8
-    container_name: loki
-    command: ["-config.file=/etc/loki/local-config.yaml"]
     ports:
-      - "3100:3100"
-    networks:
-      - monitoring-network
+      - "9090:9090"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:9090/-/healthy"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
   tempo:
-    image: grafana/tempo:2.5.0
+    image: grafana/tempo:2.6.0
     container_name: tempo
-    command: [ "-config.file=/etc/tempo/tempo.yaml" ]
-    ports:
-      - "3200:3200"
-      - "14317:4317"
-      - "14318:4318"
+    command: ["-config.file=/etc/tempo/tempo.yaml"]
     volumes:
-        - ./tempo:/etc/tempo
-    networks:
-      - monitoring-network
+      - ./tempo/tempo.yaml:/etc/tempo/tempo.yaml:ro
+      - tempo-data:/var/tempo
+    ports:
+      - "3200:3200" # Tempo HTTP API
+      - "14317:4317" # OTLP gRPC (iç network)
+      - "14318:4318" # OTLP HTTP (iç network)
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:3200/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  loki:
+    image: grafana/loki:3.1.1
+    container_name: loki
+    command: ["-config.file=/etc/loki/local-config.yaml"]
+    volumes:
+      - loki-data:/loki
+    ports:
+      - "3100:3100"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:3100/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
   grafana:
     image: grafana/grafana:11.2.2
     container_name: grafana
+    environment:
+      - GF_INSTALL_PLUGINS=grafana-lokiexplore-app
+    volumes:
+      - ./grafana/grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+      - ./grafana/dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
+      - ./grafana/dashboards:/etc/grafana/dashboards:ro
     ports:
       - "3000:3000"
-    volumes:
-      - ./grafana/grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml
-      - ./grafana/dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml
-      - ./grafana/dashboards:/etc/grafana/dashboards
     depends_on:
       - tempo
       - prometheus
       - loki
-    networks:
-      - monitoring-network
-
-networks:
-  monitoring-network:
-    driver: bridge
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
 
 volumes:
-  applogs:
+  app-logs: {}
+  tempo-data: {}
+  loki-data: {}
