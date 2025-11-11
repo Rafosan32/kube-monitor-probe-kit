@@ -1,6 +1,6 @@
 # 🧩 Kube Monitor Probe Kit — OpenTelemetry Collector & Observability Stack
 
-Bu yapılandırma, **OpenTelemetry Collector Contrib ** kullanarak  
+Bu yapılandırma, `OpenTelemetry Collector Contrib` kullanarak  
 uygulama loglarını, metriklerini ve trace’lerini merkezi olarak toplar ve  
 **Prometheus**, **Loki** ve **Tempo**’ya iletir.  
 
