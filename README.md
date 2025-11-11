@@ -31,9 +31,9 @@ docker compose up -d --build
                       │   • resource               │
                       │   • batch                  │
                       │ Exporters:                 │
-                      │   • prometheus (metrics)   │
-                      │   • tempo (traces)         │
-                      │   • loki (logs)            │
+                      │   • prometheus             │
+                      │   • tempo                  │
+                      │   • loki                   │
                       └───────────┬────────────────┘
                                   │
           ┌───────────────────────┼─────────────────────────┐
@@ -46,8 +46,8 @@ docker compose up -d --build
           │                       │                         │
           └──────────────┬────────┴────────────┬────────────┘
                          ▼                     ▼
-                ┌───────────────────────────────────────┐
-                │            Grafana Dashboard          │
-                │     (Metrics + Logs + Traces)         │
-                └───────────────────────────────────────┘
+                ┌─────────────────────────────────────────┐
+                │            Grafana Dashboard            │
+                │ (Metrics + Logs + Traces visualization) │
+                └─────────────────────────────────────────┘
 ```
