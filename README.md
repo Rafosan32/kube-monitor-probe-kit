@@ -15,7 +15,7 @@ docker compose up -d --build
 ```
 
 ## 🧱 Mimari Genel Bakış
-```shell
+```text
                     ┌───────────────────────────────┐
                     │        Java / Spring App      │
                     │  (OTLP Exporter)              │
