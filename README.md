@@ -8,9 +8,9 @@ Collector, `docker-compose` ortamında bağımsız bir konteyner olarak konumlan
 ve aşağıdaki sistemin **temel observability katmanını** oluşturur.
 
 ### Projeyi çalıştırmak için:
-git pull https://github.com/Rafosan32/kube-monitor-probe-kit.git
-cd docker
-docker compose up -d --build
+-git pull https://github.com/Rafosan32/kube-monitor-probe-kit.git
+-cd docker
+-docker compose up -d --build
 
 ## 🧱 Mimari Genel Bakış
 
