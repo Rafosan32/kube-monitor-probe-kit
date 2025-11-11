@@ -2,8 +2,7 @@
 Bu proje, **OpenTelemetry Collector Contrib** kullanarak uygulamalardan gelen **log**, **metrik** ve **trace** verilerini merkezi biçimde toplayan bir gözlemlenebilirlik (observability) altyapısı sağlar.  
 Toplanan veriler **Prometheus**, **Loki** ve **Tempo** bileşenlerine yönlendirilir; tüm veriler ise **Grafana** üzerinden tek bir arayüzde görüntülenir.
 
-Collector, `docker-compose` ortamında bağımsız bir konteyner olarak konumlandırılmıştır  
-ve sistemin **temel observability katmanını** oluşturur.
+Collector, `docker-compose` ortamında bağımsız bir konteyner olarak konumlandırılmıştır ve sistemin **temel observability katmanını** oluşturur.
 
 ## 🚀 Kurulum ve Çalıştırma
 ```bash
@@ -19,7 +18,7 @@ docker compose up -d --build
                     │       (OTLP Exporter)         │
                     └──────────────┬────────────────┘
                                    │
-                          OTLP gRPC │ HTTP (4317 / 4318)
+                         OTLP gRPC │ HTTP (4317 / 4318)
                                    ▼
                       ┌────────────────────────────┐
                       │  OpenTelemetry Collector   │
@@ -46,7 +45,7 @@ docker compose up -d --build
     └────────────┘        └──────────────┘          └─────────────┘
           │                       │                         │
           └──────────────┬────────┴────────────┬────────────┘
-                         ▼                    ▼
+                         ▼                     ▼
                 ┌───────────────────────────────────────┐
                 │            Grafana Dashboard          │
                 │     (Metrics + Logs + Traces)         │
