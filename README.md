@@ -1,54 +1,54 @@
 # 🧩 Kube Monitor Probe Kit — OpenTelemetry Collector & Observability Stack
-
-Bu yapılandırma, `OpenTelemetry Collector Contrib` kullanarak  
-uygulama loglarını, metriklerini ve trace’lerini merkezi olarak toplar ve  
-**Prometheus**, **Loki** ve **Tempo**’ya iletir.  
+Bu proje, **OpenTelemetry Collector Contrib** kullanarak uygulamalardan gelen **log**, **metrik** ve **trace** verilerini merkezi biçimde toplayan bir gözlemlenebilirlik (observability) altyapısı sağlar.  
+Toplanan veriler **Prometheus**, **Loki** ve **Tempo** bileşenlerine yönlendirilir; tüm veriler ise **Grafana** üzerinden tek bir arayüzde görüntülenir.
 
 Collector, `docker-compose` ortamında bağımsız bir konteyner olarak konumlandırılmıştır  
-ve aşağıdaki sistemin **temel observability katmanını** oluşturur.
+ve sistemin **temel observability katmanını** oluşturur.
 
-### Projeyi çalıştırmak için:
-```shell
-git pull https://github.com/Rafosan32/kube-monitor-probe-kit.git
-cd docker
+## 🚀 Kurulum ve Çalıştırma
+```bash
+git clone https://github.com/Rafosan32/kube-monitor-probe-kit.git
+cd kube-monitor-probe-kit/docker
 docker compose up -d --build
 ```
 
 ## 🧱 Mimari Genel Bakış
-```text
+```test
                     ┌───────────────────────────────┐
                     │        Java / Spring App      │
-                    │  (OTLP Exporter)              │
+                    │       (OTLP Exporter)         │
                     └──────────────┬────────────────┘
                                    │
-                        OTLP  4317 │ 4318
+                          OTLP gRPC │ HTTP (4317 / 4318)
                                    ▼
-                      ┌──────────────────────────┐
-                      │  OpenTelemetry Collector │
-                      │  (otelcol-contrib)       │
-                      ├──────────────────────────┤
-                      │ Receivers:               │
-                      │  • otlp                  │
-                      │  • filelog               │
-                      │ Processors:              │
-                      │  • resource, batch       │
-                      │ Exporters:               │
-                      │  • prometheus            │
-                      │  • tempo                 │
-                      │  • loki                  │
-                      └──────────┬───────────────┘
-                                 │
-              ┌──────────────────┼────────────────────┐
-              │                  │                    │
-              ▼                  ▼                    ▼
-        ┌────────────┐     ┌──────────────┐    ┌─────────────┐
-        │ Prometheus │     │ Grafana Tempo│    │ Grafana Loki│
-        │  (Metrics) │     │   (Traces)   │    │    (Logs)   │
-        └────────────┘     └──────────────┘    └─────────────┘
-              |                    │                     │
-              └────────────────────└──┬──────────────────┘
-                                      ▼
+                      ┌────────────────────────────┐
+                      │  OpenTelemetry Collector   │
+                      │   (otelcol-contrib)        │
+                      ├────────────────────────────┤
+                      │ Receivers:                 │
+                      │   • otlp                   │
+                      │   • filelog                │
+                      │ Processors:                │
+                      │   • resource               │
+                      │   • batch                  │
+                      │ Exporters:                 │
+                      │   • prometheus (metrics)   │
+                      │   • tempo (traces)         │
+                      │   • loki (logs)            │
+                      └───────────┬────────────────┘
+                                  │
+          ┌───────────────────────┼─────────────────────────┐
+          │                       │                         │
+          ▼                       ▼                         ▼
+    ┌────────────┐        ┌──────────────┐          ┌─────────────┐
+    │ Prometheus │        │   Tempo      │          │     Loki    │
+    │  (Metrics) │        │   (Traces)   │          │    (Logs)   │
+    └────────────┘        └──────────────┘          └─────────────┘
+          │                       │                         │
+          └──────────────┬────────┴────────────┬─────────────┘
+                         ▼                    ▼
                 ┌───────────────────────────────────────┐
-                │         Grafana Dashboard             │
+                │            Grafana Dashboard          │
+                │     (Metrics + Logs + Traces)         │
                 └───────────────────────────────────────┘
 ```
