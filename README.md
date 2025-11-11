@@ -18,7 +18,7 @@ docker compose up -d --build
 ```shell
                     ┌───────────────────────────────┐
                     │        Java / Spring App      │
-                    │  (OTLP Exporter entegreli)    │
+                    │  (OTLP Exporter)              │
                     └──────────────┬────────────────┘
                                    │
                         OTLP  4317 │ 4318
@@ -28,14 +28,14 @@ docker compose up -d --build
                       │  (otelcol-contrib)       │
                       ├──────────────────────────┤
                       │ Receivers:               │
-                      │  • otlp (metrics/traces) │
-                      │  • filelog (logs)        │
+                      │  • otlp                  │
+                      │  • filelog               │
                       │ Processors:              │
                       │  • resource, batch       │
                       │ Exporters:               │
                       │  • prometheus            │
-                      │  • tempo (traces)        │
-                      │  • loki (logs)           │
+                      │  • tempo                 │
+                      │  • loki                  │
                       └──────────┬───────────────┘
                                  │
               ┌──────────────────┼────────────────────┐
