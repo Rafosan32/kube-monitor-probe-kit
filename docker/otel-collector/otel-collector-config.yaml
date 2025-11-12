@@ -6,44 +6,6 @@ receivers:
       grpc:
         endpoint: 0.0.0.0:4317
 
-  filelog:
-    include:
-      - /app/logs/*.log
-    start_at: beginning
-    operators:
-      # 0) Önce satırı al ve null karakterleri temizle
-      - type: regex_parser
-        regex: '^(?P<raw>.*)$'
-        on_error: send
-
-      # 1) Null karakterleri ve boş satırları filtrele
-      - type: filter
-        expr: 'body.raw != nil and body.raw != "" and !(body.raw matches "\\\\u0000")'
-
-      # 2) Sadece { ile başlayan satırları işle (JSON kontrolü)
-      - type: filter
-        expr: 'body.raw matches "^\\\\s*\\\\{"'
-
-      # 3) JSON'u parse et
-      - type: json_parser
-        parse_from: body.raw
-        on_error: drop
-
-      # 4) Timestamp'i parse et
-      - type: time_parser
-        parse_from: body.timestamp
-        layout_type: gotime
-        layout: "2006-01-02 15:04:05.000"
-
-      # 5) Level alanını severity'ye dönüştür
-      - type: severity_parser
-        parse_from: body.level
-        mapping:
-          INFO: info
-          WARN: warn
-          ERROR: error
-          DEBUG: debug
-
 processors:
   resource:
     attributes:
@@ -80,6 +42,6 @@ service:
       exporters: [otlp/tempo]
 
     logs:
-      receivers: [filelog, otlp]
+      receivers: [otlp]   # <- yalnızca OTLP (filelog kaldırıldı)
       processors: [resource, batch]
       exporters: [loki]

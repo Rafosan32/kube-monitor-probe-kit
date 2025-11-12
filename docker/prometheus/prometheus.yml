@@ -5,7 +5,7 @@ global:
 scrape_configs:
   # Spring Boot Actuator (Micrometer)
   - job_name: 'kube-monitor-probe'
-    metrics_path: /actuator/prometheus
+    metrics_path: /healthz
     static_configs:
       - targets: ['kube-monitor-probe:8080']
         labels:

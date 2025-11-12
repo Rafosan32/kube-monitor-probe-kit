@@ -1,51 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<configuration>
-    <property name="LOG_DIR" value="/app/logs"/>
-    <property name="LOG_FILE" value="${LOG_DIR}/application.log"/>
+<configuration scan="false">
 
-    <!-- Tek satır JSON + her satırda newline + anında flush -->
-    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${LOG_FILE}</file>
-        <append>true</append>
-        <immediateFlush>true</immediateFlush>
-        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-            <!-- Günlük rotate + eski dosyaları sakla -->
-            <fileNamePattern>${LOG_DIR}/application.%d{yyyy-MM-dd}.log</fileNamePattern>
-            <maxHistory>7</maxHistory>
-            <cleanHistoryOnStart>true</cleanHistoryOnStart>
-        </rollingPolicy>
-        <encoder>
-            <pattern>{
-                "timestamp":"%d{yyyy-MM-dd HH:mm:ss.SSS}",
-                "level":"%level",
-                "service":"kube-monitor-probe-kit",
-                "logger":"%logger{36}",
-                "thread":"%thread",
-                "traceId":"%X{trace_id:-}",
-                "spanId":"%X{span_id:-}",
-                "message":"%msg"
-                }%n</pattern>
-        </encoder>
-    </appender>
-
+    <!-- File veya RollingFileAppender yok -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
-        <immediateFlush>true</immediateFlush>
         <encoder>
-            <pattern>{
-                "timestamp":"%d{yyyy-MM-dd HH:mm:ss.SSS}",
-                "level":"%level",
-                "service":"kube-monitor-probe-kit",
-                "logger":"%logger{36}",
-                "thread":"%thread",
-                "traceId":"%X{trace_id:-}",
-                "spanId":"%X{span_id:-}",
-                "message":"%msg"
-                }%n</pattern>
+            <pattern>%msg%n</pattern>
         </encoder>
     </appender>
 
     <root level="INFO">
         <appender-ref ref="CONSOLE"/>
-        <appender-ref ref="FILE"/>
     </root>
+
 </configuration>
