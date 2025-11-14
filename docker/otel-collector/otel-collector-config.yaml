@@ -42,6 +42,6 @@ service:
       exporters: [otlp/tempo]
 
     logs:
-      receivers: [otlp]   # <- yalnızca OTLP (filelog kaldırıldı)
+      receivers: [otlp]
       processors: [resource, batch]
       exporters: [loki]
