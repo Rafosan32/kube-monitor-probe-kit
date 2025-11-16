@@ -8,20 +8,21 @@ services:
       - OTEL_SERVICE_NAME=kube-monitor-probe-kit
       - OTEL_TRACES_EXPORTER=otlp
       - OTEL_METRICS_EXPORTER=otlp
+      - OTEL_LOGS_EXPORTER=otlp
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+      - JAVA_OPTS=-XX:MaxRAMPercentage=75
     ports:
       - "8080:8080"
-    volumes:
-      - app-logs:/app/logs
     depends_on:
       - otel-collector
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep -q 'UP'"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
       interval: 15s
       timeout: 5s
       retries: 10
-      start_period: 20s
+      start_period: 30s
 
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.104.0
@@ -29,38 +30,28 @@ services:
     command: ["--config=/etc/otelcol/otel-collector-config.yaml"]
     volumes:
       - ./otel-collector/otel-collector-config.yaml:/etc/otelcol/otel-collector-config.yaml:ro
-      - app-logs:/app/logs:ro
     ports:
-      - "4317:4317"   # OTLP gRPC
-      - "4318:4318"   # OTLP HTTP
-      - "8889:8889"   # Collector Prometheus exporter (scrape endpoint)
+      - "4317:4317"
+      - "4318:4318"
+      - "8889:8889"
+      - "8888:8888"
     depends_on:
       - tempo
       - loki
+      - prometheus
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "otelcol", "--version"]
-      interval: 30s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
 
   prometheus:
     image: prom/prometheus:v2.55.0
     container_name: prometheus
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--web.enable-lifecycle"
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     ports:
       - "9090:9090"
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:9090/-/healthy"]
-      interval: 15s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
 
   tempo:
     image: grafana/tempo:2.6.0
@@ -68,59 +59,37 @@ services:
     command: ["-config.file=/etc/tempo/tempo.yaml"]
     volumes:
       - ./tempo/tempo.yaml:/etc/tempo/tempo.yaml:ro
-      - tempo-data:/var/tempo
     ports:
-      - "3200:3200" # Tempo HTTP API
-      - "14317:4317" # OTLP gRPC (iç network)
-      - "14318:4318" # OTLP HTTP (iç network)
+      - "3200:3200"
+      - "14317:4317"
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:3200/ready"]
-      interval: 15s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
 
   loki:
     image: grafana/loki:3.1.1
     container_name: loki
     command: ["-config.file=/etc/loki/local-config.yaml"]
-    volumes:
-      - loki-data:/loki
     ports:
       - "3100:3100"
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:3100/ready"]
-      interval: 15s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
 
   grafana:
     image: grafana/grafana:11.2.2
     container_name: grafana
     environment:
-      - GF_INSTALL_PLUGINS=grafana-lokiexplore-app
+      - GF_SECURITY_ADMIN_PASSWORD=admin
     volumes:
       - ./grafana/grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
       - ./grafana/dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
-      - ./grafana/dashboards:/etc/grafana/dashboards:ro
     ports:
       - "3000:3000"
     depends_on:
       - tempo
-      - prometheus
       - loki
+      - prometheus
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:3000/api/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
       interval: 15s
       timeout: 5s
       retries: 20
       start_period: 30s
-
-volumes:
-  app-logs: {}
-  tempo-data: {}
-  loki-data: {}

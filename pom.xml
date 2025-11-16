@@ -22,26 +22,12 @@
 
     <properties>
         <java.version>21</java.version>
-        <otel.version>1.41.0</otel.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <maven.resources.encoding>UTF-8</maven.resources.encoding>
     </properties>
 
-    <dependencyManagement>
-        <dependencies>
-            <dependency>
-                <groupId>io.opentelemetry</groupId>
-                <artifactId>opentelemetry-bom</artifactId>
-                <version>${otel.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
-
     <dependencies>
-        <!-- Spring Boot web + actuator -->
+        <!-- Spring Boot -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
@@ -58,13 +44,7 @@
             <artifactId>logback-classic</artifactId>
         </dependency>
 
-        <!-- Micrometer Prometheus -->
-        <dependency>
-            <groupId>io.micrometer</groupId>
-            <artifactId>micrometer-registry-prometheus</artifactId>
-        </dependency>
-
-        <!-- OpenTelemetry SDK ve exporter’lar -->
+        <!-- OpenTelemetry - Spring Boot managed version -->
         <dependency>
             <groupId>io.opentelemetry</groupId>
             <artifactId>opentelemetry-api</artifactId>
@@ -94,7 +74,6 @@
     </dependencies>
 
     <build>
-        <!-- filtering hatalarını önlüyor -->
         <resources>
             <resource>
                 <directory>src/main/resources</directory>
@@ -115,21 +94,6 @@
                 <configuration>
                     <release>${java.version}</release>
                     <encoding>UTF-8</encoding>
-                </configuration>
-            </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-resources-plugin</artifactId>
-                <version>3.3.1</version>
-                <configuration>
-                    <encoding>UTF-8</encoding>
-                    <nonFilteredFileExtensions>
-                        <nonFilteredFileExtension>properties</nonFilteredFileExtension>
-                        <nonFilteredFileExtension>yml</nonFilteredFileExtension>
-                        <nonFilteredFileExtension>yaml</nonFilteredFileExtension>
-                        <nonFilteredFileExtension>json</nonFilteredFileExtension>
-                    </nonFilteredFileExtensions>
                 </configuration>
             </plugin>
         </plugins>

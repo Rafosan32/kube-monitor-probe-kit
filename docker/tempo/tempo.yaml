@@ -6,8 +6,6 @@ distributor:
   receivers:
     otlp:
       protocols:
-        http:
-          endpoint: 0.0.0.0:4318
         grpc:
           endpoint: 0.0.0.0:4317
 
@@ -18,8 +16,12 @@ storage:
   trace:
     backend: local
     local:
-      path: /var/tempo/traces
+      path: /tmp/tempo/traces
 
 compactor:
   compaction:
-    block_retention: 24h
+    block_retention: 1h
+
+overrides:
+  ingestion_rate_limit_bytes: 15000000
+  max_traces_per_user: 10000

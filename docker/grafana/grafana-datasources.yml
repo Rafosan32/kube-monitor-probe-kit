@@ -12,7 +12,7 @@ datasources:
     jsonData:
       tracesToLogs:
         datasourceUid: loki
-        tags: ['service.name','env']
+        tags: ['service.name']
         mappedTags: [{ key: 'service.name', value: 'service' }]
         spanStartTimeShift: '-1h'
         spanEndTimeShift: '1h'
