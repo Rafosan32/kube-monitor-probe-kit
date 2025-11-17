@@ -26,7 +26,6 @@ docker compose up -d --build
                       ├────────────────────────────┤
                       │ Receivers:                 │
                       │   • otlp                   │
-                      │   • filelog                │
                       │ Processors:                │
                       │   • resource               │
                       │   • batch                  │
