@@ -50,3 +50,20 @@ docker compose up -d --build
                 │ (Metrics + Logs + Traces visualization) │
                 └─────────────────────────────────────────┘
 ```
+
+# Kube Monitor Probe Kit
+
+Kubernetes ortamları için gRPC health check ve monitoring probe'ları sağlayan OpenTelemetry tabanlı Java uygulaması.
+
+## Özellikler
+
+- **gRPC Health Checks**: gRPC servislerinin bağlantı durumunu kontrol eder
+- **TCP Connectivity Checks**: TCP port bağlantılarını test eder
+- **OpenTelemetry Integration**: Metrik ve trace'leri OTLP/gRPC formatında export eder
+- **Configurable Targets**: Environment variables ile yapılandırılabilir target'lar
+
+## Quick Start
+
+### Build
+```bash
+mvn clean package
