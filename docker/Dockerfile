@@ -1,16 +1,14 @@
 # ---- build stage ----
 FROM eclipse-temurin:21-jdk AS build
 WORKDIR /app
-# Önce pom.xml ve gerekli dosyaları kopyala
-COPY pom.xml .
-COPY .mvn .mvn
-COPY mvnw .
+COPY ../src ./src
+COPY ../pom.xml .
+COPY ../.mvn .mvn
+COPY ../mvnw .
 RUN chmod +x mvnw
-# Dependency'leri indir
 RUN ./mvnw dependency:go-offline -B
-# Kaynak kodları kopyala ve paketle
-COPY src ./src
 RUN ./mvnw package -DskipTests -B
+
 # ---- runtime stage ----
 FROM eclipse-temurin:21-jre
 USER root
@@ -22,8 +20,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 ENV JAVA_OPTS="-XX:MaxRAMPercentage=75"
 WORKDIR /app
-# JAR dosyasını kopyala - isim kontrolü yapıldıktan sonra
-COPY --from=build /app/target/*.jar app.jar
+COPY --from=build /app/target/kube-monitor-probe-kit-1.0.0-SNAPSHOT.jar app.jar
 RUN mkdir -p /app/logs && \
     useradd -ms /bin/bash appuser && \
     chown -R appuser:appuser /app
