@@ -3,6 +3,7 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
+    image: kube-monitor-probe:otlp-grpc
     container_name: kube-monitor-probe
     environment:
       - OTEL_SERVICE_NAME=kube-monitor-probe-kit
