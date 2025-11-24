@@ -13,7 +13,6 @@ public class ProbeRunner {
     private static final Logger logger = Logger.getLogger(ProbeRunner.class.getName());
 
     private final ProbeConfig probeConfig;
-    private final GrpcProbe grpcProbe;
     private final TcpProbe tcpProbe;
     private final HealthMetrics healthMetrics;
     private final ScheduledExecutorService scheduler;
@@ -21,56 +20,40 @@ public class ProbeRunner {
     public ProbeRunner(ProbeConfig probeConfig) {
         this.probeConfig = probeConfig;
         Tracer tracer = com.rafetlabs.kubemonitorprobekit.config.OpenTelemetryConfig.getTracer();
-        this.grpcProbe = new GrpcProbe(tracer);
         this.tcpProbe = new TcpProbe(tracer);
         this.healthMetrics = new HealthMetrics();
         this.scheduler = Executors.newScheduledThreadPool(1);
     }
 
     public void start() {
-        logger.info("Probe runner başlatılıyor. Interval: " +
-                probeConfig.getProbeIntervalSeconds() + "s");
+        logger.info("Probe runner starting. Interval: " + probeConfig.getProbeIntervalSeconds() + "s");
 
-        scheduler.scheduleAtFixedRate(this::runAllProbes, 0,
-                probeConfig.getProbeIntervalSeconds(), TimeUnit.SECONDS);
+        scheduler.scheduleAtFixedRate(
+                this::runAllProbes,
+                0,
+                probeConfig.getProbeIntervalSeconds(),
+                TimeUnit.SECONDS
+        );
     }
 
     private void runAllProbes() {
-        logger.info("Tüm probe'lar çalıştırılıyor...");
+        int successfulProbes = 0;
 
-        // gRPC probe'larını çalıştır
-        for (ProbeConfig.GrpcProbeTarget target : probeConfig.getGrpcTargets()) {
+        for (String target : probeConfig.getTcpTargets()) {
             try {
-                ProbeResult result = grpcProbe.check(target);
-                healthMetrics.recordGrpcProbe(target.getTarget(), result.isSuccess(), result.getResponseTime());
+                boolean success = tcpProbe.check(target);
+                healthMetrics.recordProbe(target, success);
+                if (success) successfulProbes++;
             } catch (Exception e) {
-                logger.severe("gRPC probe hatası: " + target + " - " + e.getMessage());
+                logger.severe("Probe error: " + target + " - " + e.getMessage());
             }
         }
 
-        // TCP probe'larını çalıştır
-        for (ProbeConfig.ProbeTarget target : probeConfig.getTcpTargets()) {
-            try {
-                ProbeResult result = tcpProbe.check(target.getTarget());
-                healthMetrics.recordTcpProbe(target.getTarget(), result.isSuccess(), result.getResponseTime());
-            } catch (Exception e) {
-                logger.severe("TCP probe hatası: " + target + " - " + e.getMessage());
-            }
-        }
-
-        logger.info("Tüm probe'lar tamamlandı");
+        logger.info("Probe cycle completed: " + successfulProbes + "/" + probeConfig.getTcpTargets().size() + " successful");
     }
 
     public void stop() {
-        logger.info("Probe runner durduruluyor...");
+        logger.info("Stopping probe runner...");
         scheduler.shutdown();
-        try {
-            if (!scheduler.awaitTermination(5, TimeUnit.SECONDS)) {
-                scheduler.shutdownNow();
-            }
-        } catch (InterruptedException e) {
-            scheduler.shutdownNow();
-            Thread.currentThread().interrupt();
-        }
     }
 }
