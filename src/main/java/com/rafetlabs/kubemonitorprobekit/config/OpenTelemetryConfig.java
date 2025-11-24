@@ -1,6 +1,5 @@
 package com.rafetlabs.kubemonitorprobekit.config;
 
-import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.metrics.Meter;
 import io.opentelemetry.api.trace.Tracer;
@@ -18,8 +17,10 @@ public class OpenTelemetryConfig {
     public static void initialize() {
         logger.info("Initializing OpenTelemetry...");
 
+        // AutoConfiguredOpenTelemetrySdk otomatik olarak global instance'ı ayarlar
         openTelemetry = AutoConfiguredOpenTelemetrySdk.initialize().getOpenTelemetrySdk();
-        GlobalOpenTelemetry.set(openTelemetry);
+
+        // GlobalOpenTelemetry.set(openTelemetry); // BU SATIRI KALDIRDIK
 
         tracer = openTelemetry.getTracer("kube-monitor-probe-kit");
         meter = openTelemetry.getMeter("kube-monitor-probe-kit");

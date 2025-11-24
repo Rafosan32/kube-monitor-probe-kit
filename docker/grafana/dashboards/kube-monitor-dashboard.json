@@ -1,102 +1,109 @@
 {
   "id": null,
   "uid": "kmpk-tempo",
-  "title": "kube-monitor-probe-kit – Full Observability (Tempo)",
+  "title": "kube-monitor-probe-kit – GRPC Observability",
   "timezone": "browser",
   "schemaVersion": 39,
   "version": 1,
   "refresh": "10s",
   "editable": true,
   "time": {"from": "now-1h", "to": "now"},
-  "tags": ["kube-monitor-probe-kit","otel","spring","prometheus","loki","tempo","traces"],
+  "tags": ["kube-monitor-probe-kit","otel","grpc","prometheus","loki","tempo"],
   "panels": [
     {
       "type": "stat",
-      "title": "Scrape Health (up)",
-      "gridPos": {"x": 0, "y": 0, "w": 3, "h": 4},
+      "title": "Service Health",
+      "gridPos": {"x": 0, "y": 0, "w": 4, "h": 4},
       "datasource": "Prometheus",
       "options": {"reduceOptions": {"calcs": ["last"], "fields": "", "values": false}},
       "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color":"red"},{"color":"green","value":1}]}}},
-      "targets": [{"expr": "up", "refId": "A"}]
+      "targets": [{"expr": "up{app=\"kube-monitor-probe-kit\"}", "refId": "A"}]
     },
     {
       "type": "stat",
-      "title": "RPS",
-      "gridPos": {"x": 3, "y": 0, "w": 3, "h": 4},
+      "title": "GRPC Requests/s",
+      "gridPos": {"x": 4, "y": 0, "w": 4, "h": 4},
       "datasource": "Prometheus",
-      "targets": [{"expr": "sum(rate(http_server_requests_seconds_count[5m]))", "refId": "A"}]
+      "targets": [{"expr": "sum(rate(rpc_requests_total[5m]))", "refId": "A"}]
     },
     {
       "type": "stat",
-      "title": "Hata Oranı (5xx, %)",
-      "gridPos": {"x": 6, "y": 0, "w": 5, "h": 4},
+      "title": "GRPC Error Rate (%)",
+      "gridPos": {"x": 8, "y": 0, "w": 4, "h": 4},
       "datasource": "Prometheus",
       "fieldConfig": {"defaults": {"unit": "percentunit","min": 0,"max": 1,"thresholds": {"mode": "absolute","steps":[{"color":"green"},{"color":"orange","value":0.05},{"color":"red","value":0.1}]}}},
-      "targets": [{"expr": "sum(rate(http_server_requests_seconds_count{status=~\"5..\"}[5m])) / sum(rate(http_server_requests_seconds_count[5m]))", "refId": "A"}]
+      "targets": [{"expr": "sum(rate(rpc_requests_total{status_code!=\"OK\"}[5m])) / sum(rate(rpc_requests_total[5m]))", "refId": "A"}]
     },
     {
       "type": "stat",
-      "title": "p95 Gecikme (s)",
-      "gridPos": {"x": 11, "y": 0, "w": 5, "h": 4},
+      "title": "GRPC p95 Latency (ms)",
+      "gridPos": {"x": 12, "y": 0, "w": 4, "h": 4},
       "datasource": "Prometheus",
-      "targets": [{"expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket[5m])))", "refId": "A"}]
+      "fieldConfig": {"defaults": {"unit": "ms"}},
+      "targets": [{"expr": "histogram_quantile(0.95, sum by (le) (rate(rpc_duration_seconds_bucket[5m]))) * 1000", "refId": "A"}]
     },
     {
       "type": "stat",
-      "title": "Uptime (s)",
+      "title": "Active Connections",
       "gridPos": {"x": 16, "y": 0, "w": 4, "h": 4},
       "datasource": "Prometheus",
-      "targets": [{"expr": "time() - process_start_time_seconds", "refId": "A"}]
+      "targets": [{"expr": "rpc_active_connections", "refId": "A"}]
     },
     {
       "type": "timeseries",
-      "title": "Gecikme – p50/p95/p99 (s)",
+      "title": "GRPC Latency – p50/p95/p99 (ms)",
       "gridPos": {"x": 0, "y": 4, "w": 12, "h": 8},
       "datasource": "Prometheus",
+      "fieldConfig": {"defaults": {"unit": "ms"}},
       "targets": [
-        {"expr": "histogram_quantile(0.50, sum by (le) (rate(http_server_requests_seconds_bucket[5m])))", "legendFormat": "p50", "refId": "A"},
-        {"expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket[5m])))", "legendFormat": "p95", "refId": "B"},
-        {"expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_requests_seconds_bucket[5m])))", "legendFormat": "p99", "refId": "C"}
+        {"expr": "histogram_quantile(0.50, sum by (le) (rate(rpc_duration_seconds_bucket[5m]))) * 1000", "legendFormat": "p50", "refId": "A"},
+        {"expr": "histogram_quantile(0.95, sum by (le) (rate(rpc_duration_seconds_bucket[5m]))) * 1000", "legendFormat": "p95", "refId": "B"},
+        {"expr": "histogram_quantile(0.99, sum by (le) (rate(rpc_duration_seconds_bucket[5m]))) * 1000", "legendFormat": "p99", "refId": "C"}
       ]
     },
     {
       "type": "timeseries",
-      "title": "İstek Hızı – 2xx/4xx/5xx (req/s)",
+      "title": "GRPC Requests – Success/Error (req/s)",
       "gridPos": {"x": 12, "y": 4, "w": 12, "h": 8},
       "datasource": "Prometheus",
       "targets": [
-        {"expr": "sum(rate(http_server_requests_seconds_count{status=~\"2..\"}[5m]))", "legendFormat": "2xx", "refId": "A"},
-        {"expr": "sum(rate(http_server_requests_seconds_count{status=~\"4..\"}[5m]))", "legendFormat": "4xx", "refId": "B"},
-        {"expr": "sum(rate(http_server_requests_seconds_count{status=~\"5..\"}[5m]))", "legendFormat": "5xx", "refId": "C"}
+        {"expr": "sum(rate(rpc_requests_total{status_code=\"OK\"}[5m]))", "legendFormat": "success", "refId": "A"},
+        {"expr": "sum(rate(rpc_requests_total{status_code!=\"OK\"}[5m]))", "legendFormat": "errors", "refId": "B"}
       ]
     },
     {
       "type": "timeseries",
-      "title": "Custom Operations – rate(custom_operations_total)",
+      "title": "GRPC Message Rates",
       "gridPos": {"x": 0, "y": 12, "w": 8, "h": 7},
       "datasource": "Prometheus",
-      "targets": [{"expr": "sum(rate(custom_operations_total[1m]))", "legendFormat": "ops/s", "refId": "A"}]
+      "targets": [
+        {"expr": "sum(rate(rpc_messages_sent_total[1m]))", "legendFormat": "sent/s", "refId": "A"},
+        {"expr": "sum(rate(rpc_messages_received_total[1m]))", "legendFormat": "received/s", "refId": "B"}
+      ]
     },
     {
       "type": "timeseries",
-      "title": "Custom Operations – increase(5m)",
+      "title": "Custom Operations",
       "gridPos": {"x": 8, "y": 12, "w": 8, "h": 7},
       "datasource": "Prometheus",
-      "targets": [{"expr": "sum(increase(custom_operations_total[5m]))", "legendFormat": "increase-5m", "refId": "A"}]
+      "targets": [
+        {"expr": "sum(rate(custom_operations_total[1m]))", "legendFormat": "ops/s", "refId": "A"},
+        {"expr": "sum(increase(custom_operations_total[5m]))", "legendFormat": "increase-5m", "refId": "B"}
+      ]
     },
     {
       "type": "timeseries",
-      "title": "CPU (sec/s) & Process CPU Usage",
+      "title": "System Resources",
       "gridPos": {"x": 16, "y": 12, "w": 8, "h": 7},
       "datasource": "Prometheus",
       "targets": [
         {"expr": "rate(process_cpu_seconds_total[1m])", "legendFormat": "cpu sec/s", "refId": "A"},
-        {"expr": "process_cpu_usage", "legendFormat": "proc cpu usage", "refId": "B"}
+        {"expr": "process_resident_memory_bytes / 1024 / 1024", "legendFormat": "memory MB", "refId": "B"}
       ]
     },
     {
       "type": "timeseries",
-      "title": "JVM Heap Used/Committed/Max (MB)",
+      "title": "JVM Heap Memory (MB)",
       "gridPos": {"x": 0, "y": 19, "w": 12, "h": 8},
       "datasource": "Prometheus",
       "targets": [
@@ -107,25 +114,32 @@
     },
     {
       "type": "timeseries",
-      "title": "GC Pause (s)",
+      "title": "GC Performance",
       "gridPos": {"x": 12, "y": 19, "w": 12, "h": 8},
       "datasource": "Prometheus",
       "targets": [
-        {"expr": "rate(jvm_gc_pause_seconds_sum[5m])", "legendFormat": "gc pause sum", "refId": "A"},
-        {"expr": "rate(jvm_gc_pause_seconds_count[5m])", "legendFormat": "gc pause count", "refId": "B"}
+        {"expr": "rate(jvm_gc_pause_seconds_sum[5m]) * 1000", "legendFormat": "gc pause ms/s", "refId": "A"},
+        {"expr": "rate(jvm_gc_pause_seconds_count[5m])", "legendFormat": "gc collections/s", "refId": "B"}
       ]
     },
     {
       "type": "logs",
-      "title": "Logs (Loki) – kube-monitor-probe-kit",
+      "title": "Application Logs",
       "gridPos": {"x": 0, "y": 27, "w": 12, "h": 10},
       "datasource": "Loki",
-      "targets": [ {"expr": "{job=\"kube-monitor-probe-kit\"} | json", "refId": "A"} ],
-      "options": { "showTime": true, "wrapLogMessage": true, "prettifyLogMessage": false, "enableLogDetails": true }
+      "targets": [
+        {"expr": "{service_name=\"kube-monitor-probe-kit\"} |= ``", "refId": "A"}
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": false,
+        "enableLogDetails": true
+      }
     },
     {
       "type": "traces",
-      "title": "Traces (Tempo) – kube-monitor-probe-kit",
+      "title": "GRPC Traces",
       "gridPos": {"x": 12, "y": 27, "w": 12, "h": 10},
       "datasource": "Tempo",
       "targets": [
@@ -140,7 +154,11 @@
           "limit": 50
         }
       ],
-      "options": {"showSpanBar": true}
+      "options": {
+        "showSpanBar": true,
+        "showService": true,
+        "showDuration": true
+      }
     }
   ]
 }

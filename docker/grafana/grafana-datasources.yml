@@ -5,19 +5,36 @@ datasources:
     access: proxy
     url: http://prometheus:9090
     isDefault: true
+    uid: prometheus
+
   - name: Tempo
     type: tempo
     access: proxy
     url: http://tempo:3200
+    uid: tempo
     jsonData:
+      httpMethod: GET
+      serviceMap:
+        datasourceUid: prometheus
       tracesToLogs:
         datasourceUid: loki
-        tags: ['service.name']
-        mappedTags: [{ key: 'service.name', value: 'service' }]
-        spanStartTimeShift: '-1h'
-        spanEndTimeShift: '1h'
+        tags: ['service.name', 'k8s.pod.name']
+        filterByTraceID: false
+        filterBySpanID: false
+      tracesToMetrics:
+        datasourceUid: prometheus
+        tags: [{ key: 'service.name', value: 'service' }]
+      nodeGraph:
+        enabled: true
+
   - name: Loki
     type: loki
     access: proxy
     url: http://loki:3100
     uid: loki
+    jsonData:
+      derivedFields:
+        - datasourceUid: tempo
+          matcherRegex: "traceID=(\\w+)"
+          name: TraceID
+          url: '$${__value.raw}'
