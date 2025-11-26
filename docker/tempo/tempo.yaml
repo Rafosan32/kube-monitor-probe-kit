@@ -1,27 +1,24 @@
 server:
   http_listen_port: 3200
-  grpc_listen_port: 4317
 
 distributor:
   receivers:
     otlp:
       protocols:
         grpc:
-          endpoint: 0.0.0.0:4317
+          endpoint: "0.0.0.0:4317"
 
 ingester:
   max_block_duration: 5m
-
-storage:
-  trace:
-    backend: local
-    local:
-      path: /tmp/tempo/traces
 
 compactor:
   compaction:
     block_retention: 1h
 
-overrides:
-  ingestion_rate_limit_bytes: 15000000
-  max_traces_per_user: 10000
+storage:
+  trace:
+    backend: local
+    local:
+      path: /tmp/tempo/blocks
+    wal:
+      path: /tmp/tempo/wal
