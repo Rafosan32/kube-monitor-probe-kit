@@ -37,7 +37,6 @@ public class HealthMetrics {
         if (success) {
             successfulProbes.incrementAndGet();
         }
-
         logger.fine("Probe recorded: " + target + " - success: " + success);
     }
 }

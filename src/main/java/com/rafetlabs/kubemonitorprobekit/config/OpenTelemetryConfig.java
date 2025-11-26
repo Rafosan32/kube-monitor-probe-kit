@@ -19,19 +19,13 @@ public class OpenTelemetryConfig {
 
         // AutoConfiguredOpenTelemetrySdk otomatik olarak global instance'ı ayarlar
         openTelemetry = AutoConfiguredOpenTelemetrySdk.initialize().getOpenTelemetrySdk();
-
-        // GlobalOpenTelemetry.set(openTelemetry); // BU SATIRI KALDIRDIK
-
         tracer = openTelemetry.getTracer("kube-monitor-probe-kit");
         meter = openTelemetry.getMeter("kube-monitor-probe-kit");
-
         logger.info("OpenTelemetry configured successfully");
     }
-
     public static Tracer getTracer() {
         return tracer;
     }
-
     public static Meter getMeter() {
         return meter;
     }
